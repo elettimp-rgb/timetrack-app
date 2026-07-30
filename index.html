@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Time Track Commesse</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0f172a">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root{
+    --bg:#0f172a; --card:#1e293b; --accent:#38bdf8; --accent-dark:#0284c7;
+    --text:#e2e8f0; --muted:#94a3b8; --danger:#f87171; --ok:#4ade80;
+    --border:#334155;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:70px;}
+  header{padding:16px 20px;display:flex;justify-content:space-between;align-items:center;
+    border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;}
+  header h1{font-size:18px;margin:0;}
+  header .utente{font-size:13px;color:var(--muted);}
+  main{padding:16px;max-width:900px;margin:0 auto;}
+  .card{background:var(--card);border-radius:14px;padding:18px;margin-bottom:16px;border:1px solid var(--border);}
+  .card h2{margin-top:0;font-size:16px;}
+  label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px;}
+  input, select, textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);
+    background:#0b1220;color:var(--text);font-size:15px;}
+  textarea{resize:vertical;min-height:60px;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;}
+  .row > *{flex:1;min-width:120px;}
+  button{background:var(--accent);color:#04202f;border:none;padding:11px 18px;border-radius:10px;
+    font-weight:600;font-size:15px;cursor:pointer;margin-top:14px;}
+  button:active{background:var(--accent-dark);}
+  button.secondary{background:transparent;border:1px solid var(--border);color:var(--text);}
+  button.danger{background:var(--danger);color:#2b0b0b;}
+  .errore{color:var(--danger);font-size:14px;margin-top:8px;}
+  .ok-msg{color:var(--ok);font-size:14px;margin-top:8px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;}
+  th,td{padding:8px 6px;text-align:left;border-bottom:1px solid var(--border);}
+  th{color:var(--muted);font-weight:600;}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;background:var(--accent);color:#04202f;}
+  .badge.non-letto{background:var(--danger);color:#fff;}
+  nav.tabbar{position:fixed;bottom:0;left:0;right:0;background:var(--card);
+    border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom);}
+  nav.tabbar button{flex:1;background:none;color:var(--muted);border-radius:0;margin:0;padding:12px 4px;font-size:12px;}
+  nav.tabbar button.attivo{color:var(--accent);}
+  .hidden{display:none !important;}
+  .totale-box{background:#0b1220;border-radius:10px;padding:10px 14px;margin-top:8px;font-size:14px;}
+  .center{text-align:center;}
+</style>
+</head>
+<body>
+
+<!-- ============================= LOGIN ============================= -->
+<div id="view-login">
+  <main style="max-width:400px;margin-top:60px;">
+    <div class="card">
+      <h2 class="center">🕒 Time Track Commesse</h2>
+      <label>Email</label>
+      <input id="login-email" type="email" placeholder="mario.rossi@azienda.it">
+      <label>PIN</label>
+      <input id="login-pin" type="password" inputmode="numeric" placeholder="••••">
+      <button style="width:100%" onclick="login()">Accedi</button>
+      <div id="login-errore" class="errore"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ============================= APP (dopo login) ============================= -->
+<div id="view-app" class="hidden">
+  <header>
+    <h1 id="titolo-pagina">Time Track</h1>
+    <div>
+      <span class="utente" id="utente-nome"></span>
+      <button class="secondary" style="margin:0 0 0 10px;padding:6px 10px;font-size:12px" onclick="logout()">Esci</button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ---- INSERIMENTO ORE (collaboratore + admin) ---- -->
+    <section id="sez-ore" class="pagina">
+      <div class="card">
+        <h2>Inserisci ore di oggi</h2>
+        <div id="ore-blocco-msg" class="errore hidden">Non puoi più inserire ore per oggi: sono le 24:00 passate. Contatta l'amministratore.</div>
+        <label>Data</label>
+        <input id="ore-data" type="date">
+        <label>Commessa</label>
+        <select id="ore-commessa"></select>
+        <div class="row">
+          <div><label>Ore ordinarie</label><input id="ore-ordinario" type="number" step="0.5" value="0"></div>
+          <div><label>Straord. feriale</label><input id="ore-straord-fer" type="number" step="0.5" value="0"></div>
+          <div><label>Straord. festivo</label><input id="ore-straord-fes" type="number" step="0.5" value="0"></div>
+        </div>
+        <div class="row">
+          <div><label>Ore viaggio</label><input id="ore-viaggio" type="number" step="0.5" value="0"></div>
+          <div><label>Km</label><input id="ore-km" type="number" step="1" value="0"></div>
+          <div><label>Spese €</label><input id="ore-spese" type="number" step="0.5" value="0"></div>
+        </div>
+        <label>Note</label>
+        <textarea id="ore-note" placeholder="Descrizione attività svolta"></textarea>
+        <button onclick="salvaOre()">Salva ore</button>
+        <div id="ore-esito" class="ok-msg"></div>
+      </div>
+
+      <div class="card">
+        <h2>Filtri</h2>
+        <div class="row">
+          <div><label>Data da</label><input id="f-data-da" type="date"></div>
+          <div><label>Data a</label><input id="f-data-a" type="date"></div>
+        </div>
+        <div class="row">
+          <div><label>Commessa / cliente / cantiere</label><input id="f-commessa" type="text"></div>
+          <div><label>Descrizione</label><input id="f-descrizione" type="text"></div>
+        </div>
+        <button onclick="caricaOre()">Applica filtri</button>
+      </div>
+
+      <div class="card">
+        <h2>Storico ore filtrate</h2>
+        <div class="totale-box" id="ore-totale-box"></div>
+        <div style="overflow-x:auto">
+        <table id="tabella-ore">
+          <thead><tr><th>Data</th><th>Chi</th><th>Commessa</th><th>Cliente</th><th>Tot.ore</th><th>Note</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---- MESSAGGI ricevuti (collaboratore) ---- -->
+    <section id="sez-messaggi" class="pagina hidden">
+      <div class="card">
+        <h2>I tuoi incarichi</h2>
+        <div id="lista-messaggi"></div>
+      </div>
+    </section>
+
+    <!-- ---- REPORT MENSILE ---- -->
+    <section id="sez-report" class="pagina hidden">
+      <div class="card">
+        <h2>Report ore per mese</h2>
+        <div class="row">
+          <div><label>Mese</label><select id="rep-mese"></select></div>
+          <div><label>Anno</label><input id="rep-anno" type="number"></div>
+        </div>
+        <div id="rep-filtro-collab-wrap" class="hidden">
+          <label>Collaboratore (vuoto = tutti)</label>
+          <select id="rep-collaboratore"><option value="">Tutti</option></select>
+        </div>
+        <button onclick="caricaReport()">Genera report</button>
+        <div style="overflow-x:auto">
+        <table id="tabella-report">
+          <thead><tr><th>Collaboratore</th><th>Commessa</th><th>Cliente</th><th>Cantiere</th><th>Ordinario</th><th>Straord.Fer</th><th>Straord.Fes</th><th>Totale</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---- GESTIONE COLLABORATORI (solo admin) ---- -->
+    <section id="sez-gestione-collab" class="pagina hidden">
+      <div class="card">
+        <h2>Nuovo collaboratore</h2>
+        <div class="row">
+          <div><label>Nome</label><input id="nc-nome"></div>
+          <div><label>Cognome</label><input id="nc-cognome"></div>
+        </div>
+        <div class="row">
+          <div><label>Email</label><input id="nc-email" type="email"></div>
+          <div><label>PIN iniziale</label><input id="nc-pin" type="text"></div>
+        </div>
+        <label>Ruolo</label>
+        <select id="nc-ruolo"><option value="Collaboratore">Collaboratore</option><option value="Admin">Admin</option></select>
+        <button onclick="creaCollaboratore()">Crea collaboratore</button>
+        <div id="nc-esito" class="ok-msg"></div>
+      </div>
+      <div class="card">
+        <h2>Collaboratori esistenti</h2>
+        <div id="lista-collaboratori"></div>
+      </div>
+    </section>
+
+    <!-- ---- GESTIONE COMMESSE (solo admin) ---- -->
+    <section id="sez-gestione-commesse" class="pagina hidden">
+      <div class="card">
+        <h2>Nuova commessa</h2>
+        <div class="row">
+          <div><label>Numero</label><input id="ncm-numero"></div>
+          <div><label>Committente</label><input id="ncm-committente"></div>
+        </div>
+        <div class="row">
+          <div><label>Cantiere</label><input id="ncm-cantiere"></div>
+        </div>
+        <label>Descrizione</label>
+        <textarea id="ncm-descrizione"></textarea>
+        <button onclick="creaCommessa()">Crea commessa</button>
+        <div id="ncm-esito" class="ok-msg"></div>
+      </div>
+      <div class="card">
+        <h2>Commesse attive</h2>
+        <div id="lista-commesse"></div>
+      </div>
+    </section>
+
+    <!-- ---- INVIA INCARICO (solo admin) ---- -->
+    <section id="sez-invia-incarico" class="pagina hidden">
+      <div class="card">
+        <h2>Invia incarico a un collaboratore</h2>
+        <label>Collaboratore</label>
+        <select id="inc-collaboratore"></select>
+        <label>Commessa</label>
+        <select id="inc-commessa"></select>
+        <label>Descrizione / dove lavorare</label>
+        <textarea id="inc-descrizione" placeholder="Es: Vai al cantiere di Villa Literno per..."></textarea>
+        <button onclick="inviaIncarico()">Invia notifica</button>
+        <div id="inc-esito" class="ok-msg"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="tabbar" id="tabbar"></nav>
+</div>
+
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+/* =========================================================================
+   CONFIGURAZIONE — DA MODIFICARE prima del deploy
+   ========================================================================= */
+const API_URL = 'INCOLLA_QUI_URL_WEB_APP_APPS_SCRIPT'; // es: https://script.google.com/macros/s/AKfycb.../exec
+const ONESIGNAL_APP_ID = 'INCOLLA_QUI_ONESIGNAL_APP_ID';
+
+/* ========================================================================= */
+
+let contesto = null; // { email, nome, cognome, ruolo }
+
+function getToken(){ return localStorage.getItem('tt_token'); }
+function setToken(t){ localStorage.setItem('tt_token', t); }
+function clearToken(){ localStorage.removeItem('tt_token'); }
+
+async function apiCall(action, payload){
+  const resp = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' }, // evita preflight CORS con Apps Script
+    body: JSON.stringify({ action, token: getToken(), payload: payload || {} })
+  });
+  const data = await resp.json();
+  if (!data.ok) throw new Error(data.errore || 'Errore sconosciuto');
+  return data;
+}
+
+async function login(){
+  const email = document.getElementById('login-email').value.trim();
+  const pin = document.getElementById('login-pin').value.trim();
+  const erroreEl = document.getElementById('login-errore');
+  erroreEl.textContent = '';
+  try{
+    const resp = await apiCall('login', { email, pin });
+    setToken(resp.token);
+    await avviaApp();
+  }catch(err){
+    erroreEl.textContent = err.message;
+  }
+}
+
+function logout(){
+  clearToken();
+  document.getElementById('view-app').classList.add('hidden');
+  document.getElementById('view-login').classList.remove('hidden');
+}
+
+async function avviaApp(){
+  const resp = await apiCall('getContesto', {});
+  contesto = resp.utente;
+  document.getElementById('view-login').classList.add('hidden');
+  document.getElementById('view-app').classList.remove('hidden');
+  document.getElementById('utente-nome').textContent = contesto.nome + ' (' + contesto.ruolo + ')';
+
+  costruisciTabbar();
+  mostraPagina('sez-ore');
+  document.getElementById('ore-data').value = new Date().toISOString().slice(0,10);
+  document.getElementById('f-data-da').value = new Date().toISOString().slice(0,7) + '-01';
+  document.getElementById('f-data-a').value = new Date().toISOString().slice(0,10);
+
+  popolaSelectMesi();
+  document.getElementById('rep-anno').value = new Date().getFullYear();
+
+  await caricaCommesseSelect();
+  await caricaOre();
+
+  if (contesto.ruolo === 'Admin'){
+    document.getElementById('rep-filtro-collab-wrap').classList.remove('hidden');
+    await caricaListaCollaboratori();
+    await caricaListaCommesse();
+    await popolaSelectCollaboratoriPerAdmin();
+  } else {
+    await caricaMessaggi();
+  }
+
+  inizializzaOneSignal();
+}
+
+function costruisciTabbar(){
+  const tabbar = document.getElementById('tabbar');
+  let tabs = [
+    { id: 'sez-ore', label: '⏱ Ore', icon: '' },
+  ];
+  if (contesto.ruolo === 'Admin'){
+    tabs.push({ id: 'sez-invia-incarico', label: '📨 Incarichi' });
+    tabs.push({ id: 'sez-gestione-collab', label: '👥 Collaboratori' });
+    tabs.push({ id: 'sez-gestione-commesse', label: '🏗 Commesse' });
+    tabs.push({ id: 'sez-report', label: '📊 Report' });
+  } else {
+    tabs.push({ id: 'sez-messaggi', label: '📨 Incarichi' });
+    tabs.push({ id: 'sez-report', label: '📊 Report' });
+  }
+  tabbar.innerHTML = '';
+  tabs.forEach(function(t){
+    const btn = document.createElement('button');
+    btn.textContent = t.label;
+    btn.onclick = function(){ mostraPagina(t.id); };
+    btn.dataset.pagina = t.id;
+    tabbar.appendChild(btn);
+  });
+}
+
+function mostraPagina(id){
+  document.querySelectorAll('.pagina').forEach(function(p){ p.classList.add('hidden'); });
+  document.getElementById(id).classList.remove('hidden');
+  document.querySelectorAll('#tabbar button').forEach(function(b){
+    b.classList.toggle('attivo', b.dataset.pagina === id);
+  });
+}
+
+function popolaSelectMesi(){
+  const mesi = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const sel = document.getElementById('rep-mese');
+  mesi.forEach(function(m, i){
+    const opt = document.createElement('option');
+    opt.value = i + 1; opt.textContent = m;
+    if (i + 1 === new Date().getMonth() + 1) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+/* ---------------- ORE ---------------- */
+
+async function caricaCommesseSelect(){
+  const resp = await apiCall('listCommesse', {});
+  const sel = document.getElementById('ore-commessa');
+  sel.innerHTML = '';
+  resp.commesse.forEach(function(c){
+    const opt = document.createElement('option');
+    opt.value = c.Numero;
+    opt.dataset.committente = c.Committente;
+    opt.dataset.cantiere = c.Cantiere;
+    opt.textContent = c.Numero + ' — ' + c.Committente + ' (' + c.Cantiere + ')';
+    sel.appendChild(opt);
+  });
+
+  const selInc = document.getElementById('inc-commessa');
+  if (selInc){
+    selInc.innerHTML = sel.innerHTML;
+  }
+}
+
+async function salvaOre(){
+  const esito = document.getElementById('ore-esito');
+  esito.textContent = ''; esito.className = 'ok-msg';
+  const selCommessa = document.getElementById('ore-commessa');
+  const opt = selCommessa.options[selCommessa.selectedIndex];
+  try{
+    await apiCall('salvaOre', {
+      data: document.getElementById('ore-data').value,
+      commNr: selCommessa.value,
+      committente: opt ? opt.dataset.committente : '',
+      cantiere: opt ? opt.dataset.cantiere : '',
+      ordinario: document.getElementById('ore-ordinario').value,
+      straordFeriale: document.getElementById('ore-straord-fer').value,
+      straordFestivo: document.getElementById('ore-straord-fes').value,
+      oreViaggio: document.getElementById('ore-viaggio').value,
+      km: document.getElementById('ore-km').value,
+      spese: document.getElementById('ore-spese').value,
+      note: document.getElementById('ore-note').value
+    });
+    esito.textContent = 'Ore salvate correttamente ✅';
+    await caricaOre();
+  }catch(err){
+    esito.textContent = err.message;
+    esito.className = 'errore';
+  }
+}
+
+async function caricaOre(){
+  const filtri = {
+    dataDa: document.getElementById('f-data-da').value,
+    dataA: document.getElementById('f-data-a').value,
+    commessa: document.getElementById('f-commessa').value,
+    descrizione: document.getElementById('f-descrizione').value
+  };
+  const resp = await apiCall('getOre', filtri);
+  const tbody = document.querySelector('#tabella-ore tbody');
+  tbody.innerHTML = '';
+  let totale = 0;
+  resp.righe.forEach(function(r){
+    totale += Number(r.totale || 0);
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + r.data + '</td><td>' + r.nome + '</td><td>' + r.commNr + '</td>' +
+      '<td>' + r.committente + '</td><td>' + r.totale + '</td><td>' + (r.note||'') + '</td>';
+    tbody.appendChild(tr);
+  });
+  document.getElementById('ore-totale-box').textContent = 'Totale ore nel periodo filtrato: ' + totale.toFixed(1) + ' h — ' + resp.righe.length + ' righe';
+}
+
+/* ---------------- MESSAGGI (collaboratore) ---------------- */
+
+async function caricaMessaggi(){
+  const resp = await apiCall('getMessaggi', {});
+  const wrap = document.getElementById('lista-messaggi');
+  wrap.innerHTML = '';
+  if (resp.messaggi.length === 0){ wrap.innerHTML = '<p style="color:var(--muted)">Nessun incarico ricevuto.</p>'; return; }
+  resp.messaggi.forEach(function(m){
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.style.margin = '0 0 10px 0';
+    div.innerHTML = '<span class="badge ' + (m.letto ? '' : 'non-letto') + '">' + (m.letto ? 'Letto' : 'Nuovo') + '</span> ' +
+      '<b>Commessa ' + m.commNr + '</b><p>' + m.descrizione + '</p>' +
+      '<small style="color:var(--muted)">' + new Date(m.dataInvio).toLocaleString('it-IT') + '</small>';
+    if (!m.letto){
+      const btn = document.createElement('button');
+      btn.textContent = 'Segna come letto';
+      btn.onclick = async function(){ await apiCall('segnaLetto', { id: m.id }); await caricaMessaggi(); };
+      div.appendChild(btn);
+    }
+    wrap.appendChild(div);
+  });
+}
+
+/* ---------------- REPORT ---------------- */
+
+async function caricaReport(){
+  const payload = {
+    mese: document.getElementById('rep-mese').value,
+    anno: document.getElementById('rep-anno').value
+  };
+  const selCollab = document.getElementById('rep-collaboratore');
+  if (selCollab && selCollab.value) payload.email = selCollab.value;
+
+  const resp = await apiCall('getReportMensile', payload);
+  const tbody = document.querySelector('#tabella-report tbody');
+  tbody.innerHTML = '';
+  resp.righe.forEach(function(r){
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + r.nome + '</td><td>' + r.commNr + '</td><td>' + r.committente + '</td><td>' + r.cantiere + '</td>' +
+      '<td>' + r.ordinario.toFixed(1) + '</td><td>' + r.straordFeriale.toFixed(1) + '</td><td>' + r.straordFestivo.toFixed(1) + '</td><td><b>' + r.totale.toFixed(1) + '</b></td>';
+    tbody.appendChild(tr);
+  });
+}
+
+async function popolaSelectCollaboratoriPerAdmin(){
+  const resp = await apiCall('listCollaboratori', {});
+  const sel = document.getElementById('rep-collaboratore');
+  resp.collaboratori.forEach(function(c){
+    const opt = document.createElement('option');
+    opt.value = c.email; opt.textContent = c.nome + ' ' + c.cognome;
+    sel.appendChild(opt);
+  });
+  const selInc = document.getElementById('inc-collaboratore');
+  resp.collaboratori.filter(function(c){return c.attivo;}).forEach(function(c){
+    const opt = document.createElement('option');
+    opt.value = c.email; opt.textContent = c.nome + ' ' + c.cognome;
+    selInc.appendChild(opt);
+  });
+}
+
+/* ---------------- GESTIONE COLLABORATORI (admin) ---------------- */
+
+async function caricaListaCollaboratori(){
+  const resp = await apiCall('listCollaboratori', {});
+  const wrap = document.getElementById('lista-collaboratori');
+  wrap.innerHTML = '';
+  resp.collaboratori.forEach(function(c){
+    const div = document.createElement('div');
+    div.style.borderBottom = '1px solid var(--border)';
+    div.style.padding = '8px 0';
+    div.innerHTML = '<b>' + c.nome + ' ' + c.cognome + '</b> — ' + c.email + ' — ' + c.ruolo +
+      ' — <span class="badge ' + (c.attivo ? '' : 'non-letto') + '">' + (c.attivo ? 'Attivo' : 'Disattivato') + '</span>';
+    const btn = document.createElement('button');
+    btn.textContent = c.attivo ? 'Disattiva' : 'Riattiva';
+    btn.className = c.attivo ? 'danger' : 'secondary';
+    btn.onclick = async function(){
+      await apiCall('setAttivoCollaboratore', { email: c.email, attivo: !c.attivo });
+      await caricaListaCollaboratori();
+    };
+    div.appendChild(document.createElement('br'));
+    div.appendChild(btn);
+    wrap.appendChild(div);
+  });
+}
+
+async function creaCollaboratore(){
+  const esito = document.getElementById('nc-esito');
+  esito.textContent = ''; esito.className = 'ok-msg';
+  try{
+    await apiCall('addCollaboratore', {
+      nome: document.getElementById('nc-nome').value,
+      cognome: document.getElementById('nc-cognome').value,
+      email: document.getElementById('nc-email').value,
+      pin: document.getElementById('nc-pin').value,
+      ruolo: document.getElementById('nc-ruolo').value
+    });
+    esito.textContent = 'Collaboratore creato ✅';
+    await caricaListaCollaboratori();
+  }catch(err){
+    esito.textContent = err.message; esito.className = 'errore';
+  }
+}
+
+/* ---------------- GESTIONE COMMESSE (admin) ---------------- */
+
+async function caricaListaCommesse(){
+  const resp = await apiCall('listCommesse', {});
+  const wrap = document.getElementById('lista-commesse');
+  wrap.innerHTML = '';
+  resp.commesse.forEach(function(c){
+    const div = document.createElement('div');
+    div.style.borderBottom = '1px solid var(--border)';
+    div.style.padding = '8px 0';
+    div.innerHTML = '<b>' + c.Numero + '</b> — ' + c.Committente + ' (' + c.Cantiere + ')<br><small style="color:var(--muted)">' + (c.Descrizione||'') + '</small>';
+    wrap.appendChild(div);
+  });
+}
+
+async function creaCommessa(){
+  const esito = document.getElementById('ncm-esito');
+  esito.textContent = ''; esito.className = 'ok-msg';
+  try{
+    await apiCall('addCommessa', {
+      numero: document.getElementById('ncm-numero').value,
+      committente: document.getElementById('ncm-committente').value,
+      cantiere: document.getElementById('ncm-cantiere').value,
+      descrizione: document.getElementById('ncm-descrizione').value
+    });
+    esito.textContent = 'Commessa creata ✅';
+    await caricaListaCommesse();
+    await caricaCommesseSelect();
+  }catch(err){
+    esito.textContent = err.message; esito.className = 'errore';
+  }
+}
+
+/* ---------------- INVIO INCARICO (admin) ---------------- */
+
+async function inviaIncarico(){
+  const esito = document.getElementById('inc-esito');
+  esito.textContent = ''; esito.className = 'ok-msg';
+  const selCommessa = document.getElementById('inc-commessa');
+  try{
+    await apiCall('inviaMessaggio', {
+      email: document.getElementById('inc-collaboratore').value,
+      commNr: selCommessa.value,
+      descrizione: document.getElementById('inc-descrizione').value
+    });
+    esito.textContent = 'Notifica inviata ✅';
+  }catch(err){
+    esito.textContent = err.message; esito.className = 'errore';
+  }
+}
+
+/* ---------------- PUSH (OneSignal) ---------------- */
+
+function inizializzaOneSignal(){
+  if (!window.OneSignalDeferred) window.OneSignalDeferred = [];
+  OneSignalDeferred.push(async function(OneSignal){
+    await OneSignal.init({ appId: ONESIGNAL_APP_ID, allowLocalhostAsSecureOrigin: true });
+    await OneSignal.login(contesto.email); // collega le push a questo utente (external_id)
+    OneSignal.Notifications.requestPermission();
+    const id = OneSignal.User.PushSubscription.id;
+    if (id) apiCall('registraPlayerId', { playerId: id });
+  });
+}
+
+/* ---------------- Service worker + avvio ---------------- */
+
+if ('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js');
+}
+
+// Se c'è già un token salvato, prova ad entrare direttamente
+(async function(){
+  if (getToken()){
+    try { await avviaApp(); } catch(e){ clearToken(); }
+  }
+})();
+</script>
+</body>
+</html>
