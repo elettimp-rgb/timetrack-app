@@ -3,114 +3,255 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Time Track Commesse</title>
+<title>Marcatempo Commesse</title>
 <link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#0f172a">
+<meta name="theme-color" content="#12181c">
 <link rel="apple-touch-icon" href="./icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+
 <style>
   :root{
-    --bg:#0f172a; --card:#1e293b; --accent:#38bdf8; --accent-dark:#0284c7;
-    --text:#e2e8f0; --muted:#94a3b8; --danger:#f87171; --ok:#4ade80;
-    --border:#334155;
+    /* ---- palette: cantiere / segnaletica di sicurezza ---- */
+    --bg:#12181c;
+    --surface:#1c242a;
+    --surface-2:#232c33;
+    --accent:#f2a933;       /* ambra hi-vis */
+    --accent-deep:#c9821c;
+    --ink-on-accent:#14181b;
+    --ok:#5fbf82;
+    --warn:#f2a933;
+    --bad:#e2564f;
+    --info:#4f9fd8;
+    --text:#edf1f3;
+    --muted:#8b98a2;
+    --border:#2c363d;
+    --border-strong:#3a454d;
+
+    --font-display:'Oswald',sans-serif;
+    --font-body:'Inter',sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
   }
   *{box-sizing:border-box;}
-  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:70px;}
-  header{padding:16px 20px;display:flex;justify-content:space-between;align-items:center;
-    border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;}
-  header h1{font-size:18px;margin:0;}
-  header .utente{font-size:13px;color:var(--muted);}
-  main{padding:16px;max-width:900px;margin:0 auto;}
-  .card{background:var(--card);border-radius:14px;padding:18px;margin-bottom:16px;border:1px solid var(--border);}
-  .card h2{margin-top:0;font-size:16px;}
-  label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px;}
-  input, select, textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);
-    background:#0b1220;color:var(--text);font-size:15px;}
-  textarea{resize:vertical;min-height:60px;}
+  body{margin:0;font-family:var(--font-body);background:var(--bg);color:var(--text);
+    min-height:100vh;padding-bottom:76px;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,.eyebrow,nav.tabbar button,label{font-family:var(--font-display);}
+  .mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+
+  /* ---- header: slip da "ordine di lavoro" ---- */
+  header{padding:14px 20px;display:flex;justify-content:space-between;align-items:center;
+    border-bottom:2px dashed var(--border-strong);position:sticky;top:0;background:var(--bg);z-index:20;}
+  header .brand{display:flex;align-items:center;gap:10px;}
+  header .brand .badge-logo{width:34px;height:34px;border-radius:6px;background:var(--accent);
+    color:var(--ink-on-accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-family:var(--font-mono);font-size:13px;}
+  header h1{font-size:17px;margin:0;letter-spacing:.03em;text-transform:uppercase;font-weight:600;}
+  header .utente{font-size:12px;color:var(--muted);font-family:var(--font-mono);}
+  header .btn-esci{background:none;border:1px solid var(--border-strong);color:var(--muted);
+    padding:6px 12px;border-radius:8px;font-size:11px;font-family:var(--font-body);cursor:pointer;text-transform:uppercase;letter-spacing:.04em;}
+
+  main{padding:16px;max-width:960px;margin:0 auto;}
+  .card{background:var(--surface);border-radius:4px;padding:20px;margin-bottom:16px;
+    border:1px solid var(--border);border-left:3px solid var(--accent);}
+  .card.piatta{border-left:1px solid var(--border);}
+  .card h2{margin:0 0 14px;font-size:15px;text-transform:uppercase;letter-spacing:.05em;color:var(--text);font-weight:600;}
+  .eyebrow{font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;margin:0 0 4px;}
+
+  label{display:block;font-size:11px;color:var(--muted);margin:12px 0 5px;text-transform:uppercase;letter-spacing:.04em;font-weight:500;}
+  input, select, textarea{width:100%;padding:11px 12px;border-radius:6px;border:1px solid var(--border-strong);
+    background:var(--surface-2);color:var(--text);font-size:15px;font-family:var(--font-body);}
+  input.mono, select.mono{font-family:var(--font-mono);}
+  textarea{resize:vertical;min-height:60px;font-family:var(--font-body);}
   .row{display:flex;gap:10px;flex-wrap:wrap;}
-  .row > *{flex:1;min-width:120px;}
-  button{background:var(--accent);color:#04202f;border:none;padding:11px 18px;border-radius:10px;
-    font-weight:600;font-size:15px;cursor:pointer;margin-top:14px;}
-  button:active{background:var(--accent-dark);}
-  button.secondary{background:transparent;border:1px solid var(--border);color:var(--text);}
-  button.danger{background:var(--danger);color:#2b0b0b;}
-  .errore{color:var(--danger);font-size:14px;margin-top:8px;}
-  .ok-msg{color:var(--ok);font-size:14px;margin-top:8px;}
+  .row > *{flex:1;min-width:130px;}
+
+  button{background:var(--accent);color:var(--ink-on-accent);border:none;padding:12px 20px;border-radius:6px;
+    font-weight:700;font-size:14px;cursor:pointer;margin-top:16px;font-family:var(--font-display);
+    text-transform:uppercase;letter-spacing:.04em;}
+  button:active{background:var(--accent-deep);}
+  button.secondary{background:transparent;border:1px solid var(--border-strong);color:var(--text);}
+  button.danger{background:var(--bad);color:#fff;}
+  button.piccolo{padding:7px 12px;font-size:11px;margin-top:8px;}
+  button.link{background:none;color:var(--info);text-decoration:underline;padding:0;margin:0;font-family:var(--font-body);text-transform:none;font-weight:500;}
+
+  .errore{color:var(--bad);font-size:13px;margin-top:10px;}
+  .ok-msg{color:var(--ok);font-size:13px;margin-top:10px;}
+
   table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;}
-  th,td{padding:8px 6px;text-align:left;border-bottom:1px solid var(--border);}
-  th{color:var(--muted);font-weight:600;}
-  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;background:var(--accent);color:#04202f;}
-  .badge.non-letto{background:var(--danger);color:#fff;}
-  nav.tabbar{position:fixed;bottom:0;left:0;right:0;background:var(--card);
-    border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom);}
-  nav.tabbar button{flex:1;background:none;color:var(--muted);border-radius:0;margin:0;padding:12px 4px;font-size:12px;}
-  nav.tabbar button.attivo{color:var(--accent);}
+  th,td{padding:9px 6px;text-align:left;border-bottom:1px solid var(--border);}
+  th{color:var(--muted);font-weight:600;font-family:var(--font-display);text-transform:uppercase;font-size:11px;letter-spacing:.04em;}
+  td.mono, th.mono{font-family:var(--font-mono);}
+
+  .badge{display:inline-block;padding:3px 9px;border-radius:3px;font-size:10px;font-family:var(--font-display);
+    text-transform:uppercase;letter-spacing:.04em;background:var(--accent);color:var(--ink-on-accent);}
+  .badge.non-letto{background:var(--bad);color:#fff;}
+  .badge.ok{background:var(--ok);color:#08240f;}
+
+  /* ---- timbro (stamp) per lo stato delle richieste ---- */
+  .stamp{display:inline-block;border:2px solid currentColor;border-radius:4px;padding:3px 10px;
+    font-family:var(--font-display);text-transform:uppercase;letter-spacing:.08em;font-size:11px;
+    transform:rotate(-3deg);font-weight:700;}
+  .stamp.attesa{color:var(--warn);}
+  .stamp.approvata{color:var(--ok);}
+  .stamp.rifiutata{color:var(--bad);}
+
+  nav.tabbar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);
+    border-top:1px solid var(--border);display:flex;overflow-x:auto;padding-bottom:env(safe-area-inset-bottom);z-index:20;}
+  nav.tabbar button{flex:1 0 auto;min-width:76px;background:none;color:var(--muted);border-radius:0;margin:0;
+    padding:10px 6px 8px;font-size:10px;border-top:2px solid transparent;text-transform:uppercase;letter-spacing:.03em;}
+  nav.tabbar button .ic{display:block;font-size:17px;margin-bottom:2px;}
+  nav.tabbar button.attivo{color:var(--accent);border-top-color:var(--accent);}
   .hidden{display:none !important;}
-  .totale-box{background:#0b1220;border-radius:10px;padding:10px 14px;margin-top:8px;font-size:14px;}
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:6px;}
+  .kpi{background:var(--surface-2);border-radius:4px;padding:14px;border:1px solid var(--border);}
+  .kpi .num{font-family:var(--font-mono);font-size:26px;font-weight:700;color:var(--accent);}
+  .kpi .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:2px;}
+  .kpi.alert .num{color:var(--bad);}
+
+  .chart-wrap{position:relative;height:240px;margin-top:10px;}
+
+  /* ---- SIGNATURE: marcatempo digitale ---- */
+  .marcatempo{background:linear-gradient(180deg,#1a2229,#151b20);border:1px solid var(--border-strong);
+    border-radius:6px;padding:22px;text-align:center;margin-bottom:16px;}
+  .marcatempo .data-corrente{font-family:var(--font-display);font-size:12px;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;}
+  .marcatempo .ora-corrente{font-family:var(--font-mono);font-size:44px;font-weight:700;color:var(--accent);
+    letter-spacing:.06em;text-shadow:0 0 18px rgba(242,169,51,.45);line-height:1;}
+  .marcatempo .sub{font-size:11px;color:var(--muted);margin-top:8px;}
+
+  .export-bar{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+  .export-bar button{margin-top:0;}
+
+  .lista-item{border-bottom:1px solid var(--border);padding:12px 0;}
+  .lista-item:last-child{border-bottom:none;}
+
   .center{text-align:center;}
+  .muted{color:var(--muted);}
+  .tab-interna{display:flex;gap:8px;margin-bottom:14px;border-bottom:1px solid var(--border);}
+  .tab-interna button{background:none;color:var(--muted);margin:0;padding:8px 4px;border-radius:0;
+    border-bottom:2px solid transparent;font-size:12px;}
+  .tab-interna button.attivo{color:var(--accent);border-bottom-color:var(--accent);}
 </style>
 </head>
 <body>
 
 <!-- ============================= LOGIN ============================= -->
 <div id="view-login">
-  <main style="max-width:400px;margin-top:60px;">
-    <div class="card">
-      <h2 class="center">🕒 Time Track Commesse</h2>
+  <main style="max-width:400px;margin-top:70px;">
+    <div class="card center">
+      <div class="badge-logo" style="margin:0 auto 14px;width:48px;height:48px;font-size:18px;display:flex;align-items:center;justify-content:center;">⏱</div>
+      <h2 style="text-transform:uppercase;letter-spacing:.04em;">Marcatempo Commesse</h2>
+      <p class="muted" style="font-size:13px;margin-top:-8px;">Accesso riservato al personale</p>
       <label>Email</label>
       <input id="login-email" type="email" placeholder="mario.rossi@azienda.it">
       <label>PIN</label>
-      <input id="login-pin" type="password" inputmode="numeric" placeholder="••••">
+      <input id="login-pin" type="password" inputmode="numeric" class="mono" placeholder="••••">
       <button style="width:100%" onclick="login()">Accedi</button>
       <div id="login-errore" class="errore"></div>
     </div>
   </main>
 </div>
 
-<!-- ============================= APP (dopo login) ============================= -->
+<!-- ============================= APP ============================= -->
 <div id="view-app" class="hidden">
   <header>
-    <h1 id="titolo-pagina">Time Track</h1>
-    <div>
-      <span class="utente" id="utente-nome"></span>
-      <button class="secondary" style="margin:0 0 0 10px;padding:6px 10px;font-size:12px" onclick="logout()">Esci</button>
+    <div class="brand">
+      <div class="badge-logo">TT</div>
+      <div>
+        <h1 id="titolo-pagina">Marcatempo</h1>
+        <div class="utente" id="utente-nome"></div>
+      </div>
     </div>
+    <button class="btn-esci" onclick="logout()">Esci</button>
   </header>
 
   <main>
 
-    <!-- ---- INSERIMENTO ORE (collaboratore + admin) ---- -->
-    <section id="sez-ore" class="pagina">
-      <div class="card">
-        <h2>Inserisci ore di oggi</h2>
-        <div id="ore-blocco-msg" class="errore hidden">Non puoi più inserire ore per oggi: sono le 24:00 passate. Contatta l'amministratore.</div>
-        <label>Data</label>
-        <input id="ore-data" type="date">
-        <label>Commessa</label>
-        <select id="ore-commessa"></select>
-        <div class="row">
-          <div><label>Ore ordinarie</label><input id="ore-ordinario" type="number" step="0.5" value="0"></div>
-          <div><label>Straord. feriale</label><input id="ore-straord-fer" type="number" step="0.5" value="0"></div>
-          <div><label>Straord. festivo</label><input id="ore-straord-fes" type="number" step="0.5" value="0"></div>
+    <!-- ---- DASHBOARD ---- -->
+    <section id="sez-dashboard" class="pagina">
+      <div id="dash-admin" class="hidden">
+        <div class="kpi-grid">
+          <div class="kpi"><div class="num mono" id="kpi-attivi">–</div><div class="lbl">Collaboratori attivi</div></div>
+          <div class="kpi alert"><div class="num mono" id="kpi-ritardo">–</div><div class="lbl">Non inviate oggi</div></div>
+          <div class="kpi"><div class="num mono" id="kpi-richieste">–</div><div class="lbl">Richieste in attesa</div></div>
         </div>
-        <div class="row">
-          <div><label>Ore viaggio</label><input id="ore-viaggio" type="number" step="0.5" value="0"></div>
-          <div><label>Km</label><input id="ore-km" type="number" step="1" value="0"></div>
-          <div><label>Spese €</label><input id="ore-spese" type="number" step="0.5" value="0"></div>
+        <div id="kpi-ritardo-lista" class="card piatta hidden" style="border-left:3px solid var(--bad);"></div>
+
+        <div class="card piatta">
+          <h2>Ore per commessa · mese corrente</h2>
+          <div class="chart-wrap"><canvas id="chart-commessa"></canvas></div>
         </div>
-        <label>Note</label>
-        <textarea id="ore-note" placeholder="Descrizione attività svolta"></textarea>
-        <button onclick="salvaOre()">Salva ore</button>
-        <div id="ore-esito" class="ok-msg"></div>
+        <div class="card piatta">
+          <h2>Ore per collaboratore · mese corrente</h2>
+          <div class="chart-wrap"><canvas id="chart-collaboratore"></canvas></div>
+        </div>
+        <div class="card piatta">
+          <h2>Trend ultimi 30 giorni</h2>
+          <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+        </div>
+      </div>
+
+      <div id="dash-collab" class="hidden">
+        <div class="kpi-grid">
+          <div class="kpi"><div class="num mono" id="kpi-oremese">–</div><div class="lbl">Ore mese corrente</div></div>
+          <div class="kpi"><div class="num mono" id="kpi-ferieres">–</div><div class="lbl">Ferie residue</div></div>
+          <div class="kpi"><div class="num mono" id="kpi-ferieuse">–</div><div class="lbl">Ferie usate</div></div>
+        </div>
+        <div class="card piatta">
+          <h2>Ore giornaliere · mese corrente</h2>
+          <div class="chart-wrap"><canvas id="chart-giorno"></canvas></div>
+        </div>
+        <div class="card piatta">
+          <h2>Ripartizione per commessa</h2>
+          <div class="chart-wrap"><canvas id="chart-mie-commesse"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---- INSERIMENTO ORE ---- -->
+    <section id="sez-ore" class="pagina hidden">
+      <div class="marcatempo">
+        <div class="data-corrente" id="mt-data">—</div>
+        <div class="ora-corrente mono" id="mt-ora">00:00:00</div>
+        <div class="sub">Le ore vengono timbrate sulla giornata odierna</div>
       </div>
 
       <div class="card">
+        <h2>Timbra ore di oggi</h2>
+        <div id="ore-blocco-msg" class="errore hidden">Non puoi più inserire ore per oggi: la finestra si è chiusa a mezzanotte. Contatta l'amministratore.</div>
+        <label>Data</label>
+        <input id="ore-data" type="date" class="mono">
+        <label>Commessa</label>
+        <select id="ore-commessa"></select>
+        <div class="row">
+          <div><label>Ordinarie</label><input id="ore-ordinario" type="number" step="0.5" value="0" class="mono"></div>
+          <div><label>Straord. feriale</label><input id="ore-straord-fer" type="number" step="0.5" value="0" class="mono"></div>
+          <div><label>Straord. festivo</label><input id="ore-straord-fes" type="number" step="0.5" value="0" class="mono"></div>
+        </div>
+        <div class="row">
+          <div><label>Ore viaggio</label><input id="ore-viaggio" type="number" step="0.5" value="0" class="mono"></div>
+          <div><label>Km</label><input id="ore-km" type="number" step="1" value="0" class="mono"></div>
+          <div><label>Spese €</label><input id="ore-spese" type="number" step="0.5" value="0" class="mono"></div>
+        </div>
+        <label>Note</label>
+        <textarea id="ore-note" placeholder="Descrizione attività svolta"></textarea>
+        <button onclick="salvaOre()">Timbra ore</button>
+        <div id="ore-esito" class="ok-msg"></div>
+      </div>
+
+      <div class="card piatta">
         <h2>Filtri</h2>
         <div class="row">
-          <div><label>Data da</label><input id="f-data-da" type="date"></div>
-          <div><label>Data a</label><input id="f-data-a" type="date"></div>
+          <div><label>Data da</label><input id="f-data-da" type="date" class="mono"></div>
+          <div><label>Data a</label><input id="f-data-a" type="date" class="mono"></div>
         </div>
         <div class="row">
           <div><label>Commessa / cliente / cantiere</label><input id="f-commessa" type="text"></div>
@@ -119,21 +260,54 @@
         <button onclick="caricaOre()">Applica filtri</button>
       </div>
 
-      <div class="card">
+      <div class="card piatta">
         <h2>Storico ore filtrate</h2>
-        <div class="totale-box" id="ore-totale-box"></div>
+        <div class="kpi-grid" style="grid-template-columns:1fr;">
+          <div class="kpi"><div class="num mono" id="ore-totale-num">0.0</div><div class="lbl" id="ore-totale-lbl">Totale ore nel periodo</div></div>
+        </div>
+        <div class="export-bar">
+          <button class="secondary piccolo" onclick="esportaExcel('tabella-ore','Storico_Ore')">⬇ Excel</button>
+          <button class="secondary piccolo" onclick="esportaPDF('tabella-ore','Storico Ore')">⬇ PDF</button>
+        </div>
         <div style="overflow-x:auto">
         <table id="tabella-ore">
-          <thead><tr><th>Data</th><th>Chi</th><th>Commessa</th><th>Cliente</th><th>Tot.ore</th><th>Note</th></tr></thead>
+          <thead><tr><th>Data</th><th>Chi</th><th>Commessa</th><th>Cliente</th><th class="mono">Tot.ore</th><th>Note</th></tr></thead>
           <tbody></tbody>
         </table>
         </div>
       </div>
     </section>
 
+    <!-- ---- FERIE / PERMESSI ---- -->
+    <section id="sez-ferie" class="pagina hidden">
+      <div id="ferie-form-collab" class="card hidden">
+        <h2>Nuova richiesta</h2>
+        <label>Tipo</label>
+        <select id="fr-tipo"><option value="Ferie">Ferie</option><option value="Permesso">Permesso</option><option value="Malattia">Malattia</option></select>
+        <div class="row">
+          <div><label>Dal</label><input id="fr-da" type="date" class="mono"></div>
+          <div><label>Al</label><input id="fr-a" type="date" class="mono"></div>
+        </div>
+        <label>Note</label>
+        <textarea id="fr-note" placeholder="Motivo / dettagli"></textarea>
+        <button onclick="creaRichiesta()">Invia richiesta</button>
+        <div id="fr-esito" class="ok-msg"></div>
+      </div>
+
+      <div class="tab-interna" id="ferie-admin-tabs" style="display:none">
+        <button class="attivo" data-filtro="attesa" onclick="cambiaFiltroRichieste('attesa')">In attesa</button>
+        <button data-filtro="tutte" onclick="cambiaFiltroRichieste('tutte')">Tutte</button>
+      </div>
+
+      <div class="card piatta">
+        <h2>Richieste</h2>
+        <div id="lista-richieste"></div>
+      </div>
+    </section>
+
     <!-- ---- MESSAGGI ricevuti (collaboratore) ---- -->
     <section id="sez-messaggi" class="pagina hidden">
-      <div class="card">
+      <div class="card piatta">
         <h2>I tuoi incarichi</h2>
         <div id="lista-messaggi"></div>
       </div>
@@ -145,23 +319,29 @@
         <h2>Report ore per mese</h2>
         <div class="row">
           <div><label>Mese</label><select id="rep-mese"></select></div>
-          <div><label>Anno</label><input id="rep-anno" type="number"></div>
+          <div><label>Anno</label><input id="rep-anno" type="number" class="mono"></div>
         </div>
         <div id="rep-filtro-collab-wrap" class="hidden">
           <label>Collaboratore (vuoto = tutti)</label>
           <select id="rep-collaboratore"><option value="">Tutti</option></select>
         </div>
         <button onclick="caricaReport()">Genera report</button>
+      </div>
+      <div class="card piatta">
+        <div class="export-bar">
+          <button class="secondary piccolo" onclick="esportaExcel('tabella-report','Report_Mensile')">⬇ Excel</button>
+          <button class="secondary piccolo" onclick="esportaPDF('tabella-report','Report Mensile')">⬇ PDF</button>
+        </div>
         <div style="overflow-x:auto">
         <table id="tabella-report">
-          <thead><tr><th>Collaboratore</th><th>Commessa</th><th>Cliente</th><th>Cantiere</th><th>Ordinario</th><th>Straord.Fer</th><th>Straord.Fes</th><th>Totale</th></tr></thead>
+          <thead><tr><th>Collaboratore</th><th>Commessa</th><th>Cliente</th><th>Cantiere</th><th class="mono">Ordin.</th><th class="mono">Str.Fer</th><th class="mono">Str.Fes</th><th class="mono">Totale</th></tr></thead>
           <tbody></tbody>
         </table>
         </div>
       </div>
     </section>
 
-    <!-- ---- GESTIONE COLLABORATORI (solo admin) ---- -->
+    <!-- ---- GESTIONE COLLABORATORI (admin) ---- -->
     <section id="sez-gestione-collab" class="pagina hidden">
       <div class="card">
         <h2>Nuovo collaboratore</h2>
@@ -171,42 +351,42 @@
         </div>
         <div class="row">
           <div><label>Email</label><input id="nc-email" type="email"></div>
-          <div><label>PIN iniziale</label><input id="nc-pin" type="text"></div>
+          <div><label>PIN iniziale</label><input id="nc-pin" class="mono"></div>
         </div>
-        <label>Ruolo</label>
-        <select id="nc-ruolo"><option value="Collaboratore">Collaboratore</option><option value="Admin">Admin</option></select>
+        <div class="row">
+          <div><label>Ruolo</label><select id="nc-ruolo"><option value="Collaboratore">Collaboratore</option><option value="Admin">Admin</option></select></div>
+          <div><label>Ferie annue (gg)</label><input id="nc-ferie" type="number" value="26" class="mono"></div>
+        </div>
         <button onclick="creaCollaboratore()">Crea collaboratore</button>
         <div id="nc-esito" class="ok-msg"></div>
       </div>
-      <div class="card">
+      <div class="card piatta">
         <h2>Collaboratori esistenti</h2>
         <div id="lista-collaboratori"></div>
       </div>
     </section>
 
-    <!-- ---- GESTIONE COMMESSE (solo admin) ---- -->
+    <!-- ---- GESTIONE COMMESSE (admin) ---- -->
     <section id="sez-gestione-commesse" class="pagina hidden">
       <div class="card">
         <h2>Nuova commessa</h2>
         <div class="row">
-          <div><label>Numero</label><input id="ncm-numero"></div>
+          <div><label>Numero</label><input id="ncm-numero" class="mono"></div>
           <div><label>Committente</label><input id="ncm-committente"></div>
         </div>
-        <div class="row">
-          <div><label>Cantiere</label><input id="ncm-cantiere"></div>
-        </div>
+        <div class="row"><div><label>Cantiere</label><input id="ncm-cantiere"></div></div>
         <label>Descrizione</label>
         <textarea id="ncm-descrizione"></textarea>
         <button onclick="creaCommessa()">Crea commessa</button>
         <div id="ncm-esito" class="ok-msg"></div>
       </div>
-      <div class="card">
+      <div class="card piatta">
         <h2>Commesse attive</h2>
         <div id="lista-commesse"></div>
       </div>
     </section>
 
-    <!-- ---- INVIA INCARICO (solo admin) ---- -->
+    <!-- ---- INVIA INCARICO (admin) ---- -->
     <section id="sez-invia-incarico" class="pagina hidden">
       <div class="card">
         <h2>Invia incarico a un collaboratore</h2>
@@ -231,12 +411,13 @@
 /* =========================================================================
    CONFIGURAZIONE — DA MODIFICARE prima del deploy
    ========================================================================= */
-const API_URL = 'https://script.google.com/macros/s/AKfycbxw-GTve7CDdK3QPRFLBCFhiEnY4SpWuvGehl_DMBsLLu4XE2U0ZI13P4f80aK4N8tK/exec'; // es: https://script.google.com/macros/s/AKfycb.../exec
-const ONESIGNAL_APP_ID = '575c1052-f6b4-4a17-a726-d9d3cff1bde3';
-
+const API_URL = 'INCOLLA_QUI_URL_WEB_APP_APPS_SCRIPT';
+const ONESIGNAL_APP_ID = 'INCOLLA_QUI_ONESIGNAL_APP_ID';
 /* ========================================================================= */
 
-let contesto = null; // { email, nome, cognome, ruolo }
+let contesto = null;
+let grafici = {}; // tiene le istanze Chart.js per poterle distruggere/ricreare
+let filtroRichieste = 'attesa';
 
 function getToken(){ return localStorage.getItem('tt_token'); }
 function setToken(t){ localStorage.setItem('tt_token', t); }
@@ -245,7 +426,7 @@ function clearToken(){ localStorage.removeItem('tt_token'); }
 async function apiCall(action, payload){
   const resp = await fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain' }, // evita preflight CORS con Apps Script
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({ action, token: getToken(), payload: payload || {} })
   });
   const data = await resp.json();
@@ -262,9 +443,7 @@ async function login(){
     const resp = await apiCall('login', { email, pin });
     setToken(resp.token);
     await avviaApp();
-  }catch(err){
-    erroreEl.textContent = err.message;
-  }
+  }catch(err){ erroreEl.textContent = err.message; }
 }
 
 function logout(){
@@ -278,50 +457,60 @@ async function avviaApp(){
   contesto = resp.utente;
   document.getElementById('view-login').classList.add('hidden');
   document.getElementById('view-app').classList.remove('hidden');
-  document.getElementById('utente-nome').textContent = contesto.nome + ' (' + contesto.ruolo + ')';
+  document.getElementById('utente-nome').textContent = contesto.nome + ' · ' + contesto.ruolo;
 
   costruisciTabbar();
-  mostraPagina('sez-ore');
   document.getElementById('ore-data').value = new Date().toISOString().slice(0,10);
   document.getElementById('f-data-da').value = new Date().toISOString().slice(0,7) + '-01';
   document.getElementById('f-data-a').value = new Date().toISOString().slice(0,10);
+  avviaOrologio();
 
   popolaSelectMesi();
   document.getElementById('rep-anno').value = new Date().getFullYear();
 
   await caricaCommesseSelect();
   await caricaOre();
+  await caricaRichieste();
 
   if (contesto.ruolo === 'Admin'){
+    document.getElementById('dash-admin').classList.remove('hidden');
     document.getElementById('rep-filtro-collab-wrap').classList.remove('hidden');
+    document.getElementById('ferie-admin-tabs').style.display = 'flex';
     await caricaListaCollaboratori();
     await caricaListaCommesse();
     await popolaSelectCollaboratoriPerAdmin();
+    await caricaDashboardAdmin();
   } else {
+    document.getElementById('dash-collab').classList.remove('hidden');
+    document.getElementById('ferie-form-collab').classList.remove('hidden');
     await caricaMessaggi();
+    await caricaDashboardCollaboratore();
   }
 
+  mostraPagina('sez-dashboard');
   inizializzaOneSignal();
 }
 
 function costruisciTabbar(){
   const tabbar = document.getElementById('tabbar');
   let tabs = [
-    { id: 'sez-ore', label: '⏱ Ore', icon: '' },
+    { id: 'sez-dashboard', label: 'Dashboard', ic: '📊' },
+    { id: 'sez-ore', label: 'Ore', ic: '⏱' },
+    { id: 'sez-ferie', label: 'Ferie', ic: '🌴' },
   ];
   if (contesto.ruolo === 'Admin'){
-    tabs.push({ id: 'sez-invia-incarico', label: '📨 Incarichi' });
-    tabs.push({ id: 'sez-gestione-collab', label: '👥 Collaboratori' });
-    tabs.push({ id: 'sez-gestione-commesse', label: '🏗 Commesse' });
-    tabs.push({ id: 'sez-report', label: '📊 Report' });
+    tabs.push({ id: 'sez-invia-incarico', label: 'Incarichi', ic: '📨' });
+    tabs.push({ id: 'sez-gestione-collab', label: 'Team', ic: '👥' });
+    tabs.push({ id: 'sez-gestione-commesse', label: 'Commesse', ic: '🏗' });
+    tabs.push({ id: 'sez-report', label: 'Report', ic: '📄' });
   } else {
-    tabs.push({ id: 'sez-messaggi', label: '📨 Incarichi' });
-    tabs.push({ id: 'sez-report', label: '📊 Report' });
+    tabs.push({ id: 'sez-messaggi', label: 'Incarichi', ic: '📨' });
+    tabs.push({ id: 'sez-report', label: 'Report', ic: '📄' });
   }
   tabbar.innerHTML = '';
   tabs.forEach(function(t){
     const btn = document.createElement('button');
-    btn.textContent = t.label;
+    btn.innerHTML = '<span class="ic">' + t.ic + '</span>' + t.label;
     btn.onclick = function(){ mostraPagina(t.id); };
     btn.dataset.pagina = t.id;
     tabbar.appendChild(btn);
@@ -334,6 +523,17 @@ function mostraPagina(id){
   document.querySelectorAll('#tabbar button').forEach(function(b){
     b.classList.toggle('attivo', b.dataset.pagina === id);
   });
+}
+
+/* ---------------- MARCATEMPO (segnale distintivo) ---------------- */
+function avviaOrologio(){
+  function tick(){
+    const now = new Date();
+    document.getElementById('mt-ora').textContent = now.toLocaleTimeString('it-IT');
+    document.getElementById('mt-data').textContent = now.toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  }
+  tick();
+  setInterval(tick, 1000);
 }
 
 function popolaSelectMesi(){
@@ -355,17 +555,12 @@ async function caricaCommesseSelect(){
   sel.innerHTML = '';
   resp.commesse.forEach(function(c){
     const opt = document.createElement('option');
-    opt.value = c.Numero;
-    opt.dataset.committente = c.Committente;
-    opt.dataset.cantiere = c.Cantiere;
+    opt.value = c.Numero; opt.dataset.committente = c.Committente; opt.dataset.cantiere = c.Cantiere;
     opt.textContent = c.Numero + ' — ' + c.Committente + ' (' + c.Cantiere + ')';
     sel.appendChild(opt);
   });
-
   const selInc = document.getElementById('inc-commessa');
-  if (selInc){
-    selInc.innerHTML = sel.innerHTML;
-  }
+  if (selInc) selInc.innerHTML = sel.innerHTML;
 }
 
 async function salvaOre(){
@@ -387,12 +582,9 @@ async function salvaOre(){
       spese: document.getElementById('ore-spese').value,
       note: document.getElementById('ore-note').value
     });
-    esito.textContent = 'Ore salvate correttamente ✅';
+    esito.textContent = 'Ore timbrate correttamente ✅';
     await caricaOre();
-  }catch(err){
-    esito.textContent = err.message;
-    esito.className = 'errore';
-  }
+  }catch(err){ esito.textContent = err.message; esito.className = 'errore'; }
 }
 
 async function caricaOre(){
@@ -409,11 +601,67 @@ async function caricaOre(){
   resp.righe.forEach(function(r){
     totale += Number(r.totale || 0);
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td>' + r.data + '</td><td>' + r.nome + '</td><td>' + r.commNr + '</td>' +
-      '<td>' + r.committente + '</td><td>' + r.totale + '</td><td>' + (r.note||'') + '</td>';
+    tr.innerHTML = '<td class="mono">' + r.data + '</td><td>' + r.nome + '</td><td class="mono">' + r.commNr + '</td>' +
+      '<td>' + r.committente + '</td><td class="mono">' + r.totale + '</td><td>' + (r.note||'') + '</td>';
     tbody.appendChild(tr);
   });
-  document.getElementById('ore-totale-box').textContent = 'Totale ore nel periodo filtrato: ' + totale.toFixed(1) + ' h — ' + resp.righe.length + ' righe';
+  document.getElementById('ore-totale-num').textContent = totale.toFixed(1);
+  document.getElementById('ore-totale-lbl').textContent = resp.righe.length + ' righe nel periodo filtrato';
+}
+
+/* ---------------- FERIE / PERMESSI ---------------- */
+
+async function creaRichiesta(){
+  const esito = document.getElementById('fr-esito');
+  esito.textContent=''; esito.className='ok-msg';
+  try{
+    await apiCall('creaRichiesta', {
+      tipo: document.getElementById('fr-tipo').value,
+      dataDa: document.getElementById('fr-da').value,
+      dataA: document.getElementById('fr-a').value,
+      note: document.getElementById('fr-note').value
+    });
+    esito.textContent = 'Richiesta inviata ✅';
+    await caricaRichieste();
+  }catch(err){ esito.textContent = err.message; esito.className='errore'; }
+}
+
+function cambiaFiltroRichieste(f){
+  filtroRichieste = f;
+  document.querySelectorAll('#ferie-admin-tabs button').forEach(function(b){
+    b.classList.toggle('attivo', b.dataset.filtro === f);
+  });
+  caricaRichieste();
+}
+
+async function caricaRichieste(){
+  const resp = await apiCall('listRichieste', { soloInAttesa: contesto.ruolo === 'Admin' && filtroRichieste === 'attesa' });
+  const wrap = document.getElementById('lista-richieste');
+  wrap.innerHTML = '';
+  if (resp.richieste.length === 0){ wrap.innerHTML = '<p class="muted">Nessuna richiesta.</p>'; return; }
+
+  resp.richieste.forEach(function(r){
+    const div = document.createElement('div');
+    div.className = 'lista-item';
+    const stampClass = r.stato === 'Approvata' ? 'approvata' : (r.stato === 'Rifiutata' ? 'rifiutata' : 'attesa');
+    let html = '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">' +
+      '<div><b>' + r.tipo + '</b>' + (contesto.ruolo === 'Admin' ? ' — ' + r.nome : '') +
+      '<br><span class="mono muted">' + r.dataDa + ' → ' + r.dataA + ' (' + r.giorni + ' gg)</span>' +
+      (r.note ? '<br><small class="muted">' + r.note + '</small>' : '') + '</div>' +
+      '<span class="stamp ' + stampClass + '">' + r.stato + '</span></div>';
+    div.innerHTML = html;
+
+    if (contesto.ruolo === 'Admin' && r.stato === 'In attesa'){
+      const btnOk = document.createElement('button');
+      btnOk.textContent = 'Approva'; btnOk.className = 'piccolo';
+      btnOk.onclick = async function(){ await apiCall('decidiRichiesta', { id: r.id, stato: 'Approvata' }); await caricaRichieste(); };
+      const btnNo = document.createElement('button');
+      btnNo.textContent = 'Rifiuta'; btnNo.className = 'piccolo danger';
+      btnNo.onclick = async function(){ await apiCall('decidiRichiesta', { id: r.id, stato: 'Rifiutata' }); await caricaRichieste(); };
+      div.appendChild(btnOk); div.appendChild(btnNo);
+    }
+    wrap.appendChild(div);
+  });
 }
 
 /* ---------------- MESSAGGI (collaboratore) ---------------- */
@@ -422,17 +670,16 @@ async function caricaMessaggi(){
   const resp = await apiCall('getMessaggi', {});
   const wrap = document.getElementById('lista-messaggi');
   wrap.innerHTML = '';
-  if (resp.messaggi.length === 0){ wrap.innerHTML = '<p style="color:var(--muted)">Nessun incarico ricevuto.</p>'; return; }
+  if (resp.messaggi.length === 0){ wrap.innerHTML = '<p class="muted">Nessun incarico ricevuto.</p>'; return; }
   resp.messaggi.forEach(function(m){
     const div = document.createElement('div');
-    div.className = 'card';
-    div.style.margin = '0 0 10px 0';
-    div.innerHTML = '<span class="badge ' + (m.letto ? '' : 'non-letto') + '">' + (m.letto ? 'Letto' : 'Nuovo') + '</span> ' +
-      '<b>Commessa ' + m.commNr + '</b><p>' + m.descrizione + '</p>' +
-      '<small style="color:var(--muted)">' + new Date(m.dataInvio).toLocaleString('it-IT') + '</small>';
+    div.className = 'lista-item';
+    div.innerHTML = '<span class="badge ' + (m.letto ? 'ok' : 'non-letto') + '">' + (m.letto ? 'Letto' : 'Nuovo') + '</span> ' +
+      '<b>Commessa ' + m.commNr + '</b><p style="margin:6px 0;">' + m.descrizione + '</p>' +
+      '<small class="muted mono">' + new Date(m.dataInvio).toLocaleString('it-IT') + '</small>';
     if (!m.letto){
       const btn = document.createElement('button');
-      btn.textContent = 'Segna come letto';
+      btn.textContent = 'Segna come letto'; btn.className = 'piccolo';
       btn.onclick = async function(){ await apiCall('segnaLetto', { id: m.id }); await caricaMessaggi(); };
       div.appendChild(btn);
     }
@@ -443,10 +690,7 @@ async function caricaMessaggi(){
 /* ---------------- REPORT ---------------- */
 
 async function caricaReport(){
-  const payload = {
-    mese: document.getElementById('rep-mese').value,
-    anno: document.getElementById('rep-anno').value
-  };
+  const payload = { mese: document.getElementById('rep-mese').value, anno: document.getElementById('rep-anno').value };
   const selCollab = document.getElementById('rep-collaboratore');
   if (selCollab && selCollab.value) payload.email = selCollab.value;
 
@@ -455,8 +699,8 @@ async function caricaReport(){
   tbody.innerHTML = '';
   resp.righe.forEach(function(r){
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td>' + r.nome + '</td><td>' + r.commNr + '</td><td>' + r.committente + '</td><td>' + r.cantiere + '</td>' +
-      '<td>' + r.ordinario.toFixed(1) + '</td><td>' + r.straordFeriale.toFixed(1) + '</td><td>' + r.straordFestivo.toFixed(1) + '</td><td><b>' + r.totale.toFixed(1) + '</b></td>';
+    tr.innerHTML = '<td>' + r.nome + '</td><td class="mono">' + r.commNr + '</td><td>' + r.committente + '</td><td>' + r.cantiere + '</td>' +
+      '<td class="mono">' + r.ordinario.toFixed(1) + '</td><td class="mono">' + r.straordFeriale.toFixed(1) + '</td><td class="mono">' + r.straordFestivo.toFixed(1) + '</td><td class="mono"><b>' + r.totale.toFixed(1) + '</b></td>';
     tbody.appendChild(tr);
   });
 }
@@ -485,17 +729,14 @@ async function caricaListaCollaboratori(){
   wrap.innerHTML = '';
   resp.collaboratori.forEach(function(c){
     const div = document.createElement('div');
-    div.style.borderBottom = '1px solid var(--border)';
-    div.style.padding = '8px 0';
+    div.className = 'lista-item';
     div.innerHTML = '<b>' + c.nome + ' ' + c.cognome + '</b> — ' + c.email + ' — ' + c.ruolo +
-      ' — <span class="badge ' + (c.attivo ? '' : 'non-letto') + '">' + (c.attivo ? 'Attivo' : 'Disattivato') + '</span>';
+      ' — <span class="badge ' + (c.attivo ? 'ok' : 'non-letto') + '">' + (c.attivo ? 'Attivo' : 'Disattivato') + '</span>' +
+      ' <span class="muted mono">· ' + c.ferieAnnue + ' gg ferie/anno</span>';
     const btn = document.createElement('button');
     btn.textContent = c.attivo ? 'Disattiva' : 'Riattiva';
-    btn.className = c.attivo ? 'danger' : 'secondary';
-    btn.onclick = async function(){
-      await apiCall('setAttivoCollaboratore', { email: c.email, attivo: !c.attivo });
-      await caricaListaCollaboratori();
-    };
+    btn.className = (c.attivo ? 'danger' : 'secondary') + ' piccolo';
+    btn.onclick = async function(){ await apiCall('setAttivoCollaboratore', { email: c.email, attivo: !c.attivo }); await caricaListaCollaboratori(); };
     div.appendChild(document.createElement('br'));
     div.appendChild(btn);
     wrap.appendChild(div);
@@ -511,13 +752,12 @@ async function creaCollaboratore(){
       cognome: document.getElementById('nc-cognome').value,
       email: document.getElementById('nc-email').value,
       pin: document.getElementById('nc-pin').value,
-      ruolo: document.getElementById('nc-ruolo').value
+      ruolo: document.getElementById('nc-ruolo').value,
+      ferieAnnue: document.getElementById('nc-ferie').value
     });
     esito.textContent = 'Collaboratore creato ✅';
     await caricaListaCollaboratori();
-  }catch(err){
-    esito.textContent = err.message; esito.className = 'errore';
-  }
+  }catch(err){ esito.textContent = err.message; esito.className = 'errore'; }
 }
 
 /* ---------------- GESTIONE COMMESSE (admin) ---------------- */
@@ -528,9 +768,8 @@ async function caricaListaCommesse(){
   wrap.innerHTML = '';
   resp.commesse.forEach(function(c){
     const div = document.createElement('div');
-    div.style.borderBottom = '1px solid var(--border)';
-    div.style.padding = '8px 0';
-    div.innerHTML = '<b>' + c.Numero + '</b> — ' + c.Committente + ' (' + c.Cantiere + ')<br><small style="color:var(--muted)">' + (c.Descrizione||'') + '</small>';
+    div.className = 'lista-item';
+    div.innerHTML = '<b class="mono">' + c.Numero + '</b> — ' + c.Committente + ' (' + c.Cantiere + ')<br><small class="muted">' + (c.Descrizione||'') + '</small>';
     wrap.appendChild(div);
   });
 }
@@ -548,9 +787,7 @@ async function creaCommessa(){
     esito.textContent = 'Commessa creata ✅';
     await caricaListaCommesse();
     await caricaCommesseSelect();
-  }catch(err){
-    esito.textContent = err.message; esito.className = 'errore';
-  }
+  }catch(err){ esito.textContent = err.message; esito.className = 'errore'; }
 }
 
 /* ---------------- INVIO INCARICO (admin) ---------------- */
@@ -566,9 +803,110 @@ async function inviaIncarico(){
       descrizione: document.getElementById('inc-descrizione').value
     });
     esito.textContent = 'Notifica inviata ✅';
-  }catch(err){
-    esito.textContent = err.message; esito.className = 'errore';
-  }
+  }catch(err){ esito.textContent = err.message; esito.className = 'errore'; }
+}
+
+/* ---------------- DASHBOARD + GRAFICI ---------------- */
+
+function distruggiGrafico(id){
+  if (grafici[id]) { grafici[id].destroy(); delete grafici[id]; }
+}
+
+const COLORI_GRAFICO = ['#f2a933','#4f9fd8','#5fbf82','#e2564f','#c9821c','#8b98a2','#f2c675','#7fb8e0'];
+
+function opzioniGraficoBase(){
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ labels:{ color:'#8b98a2', font:{family:'Inter'} } } },
+    scales:{
+      x:{ ticks:{ color:'#8b98a2', font:{family:'JetBrains Mono', size:10} }, grid:{ color:'#2c363d' } },
+      y:{ ticks:{ color:'#8b98a2', font:{family:'JetBrains Mono', size:10} }, grid:{ color:'#2c363d' } }
+    }
+  };
+}
+
+async function caricaDashboardAdmin(){
+  const d = await apiCall('getDashboardAdmin', {});
+  document.getElementById('kpi-attivi').textContent = d.totaleCollaboratoriAttivi;
+  document.getElementById('kpi-ritardo').textContent = d.inRitardoOggi.length;
+  document.getElementById('kpi-richieste').textContent = d.richiestePendenti;
+
+  const listaRitardo = document.getElementById('kpi-ritardo-lista');
+  if (d.inRitardoOggi.length){
+    listaRitardo.classList.remove('hidden');
+    listaRitardo.innerHTML = '<b>Non hanno ancora inviato le ore di oggi:</b><br>' + d.inRitardoOggi.join(', ');
+  } else { listaRitardo.classList.add('hidden'); }
+
+  distruggiGrafico('commessa');
+  grafici.commessa = new Chart(document.getElementById('chart-commessa'), {
+    type:'bar',
+    data:{ labels:d.perCommessa.map(x=>x.etichetta), datasets:[{ label:'Ore', data:d.perCommessa.map(x=>x.ore), backgroundColor:'#f2a933' }] },
+    options: opzioniGraficoBase()
+  });
+
+  distruggiGrafico('collaboratore');
+  grafici.collaboratore = new Chart(document.getElementById('chart-collaboratore'), {
+    type:'bar',
+    data:{ labels:d.perCollaboratore.map(x=>x.etichetta), datasets:[{ label:'Ore', data:d.perCollaboratore.map(x=>x.ore), backgroundColor:'#4f9fd8' }] },
+    options: opzioniGraficoBase()
+  });
+
+  distruggiGrafico('trend');
+  grafici.trend = new Chart(document.getElementById('chart-trend'), {
+    type:'line',
+    data:{ labels:d.trend.map(x=>x.data.slice(5)), datasets:[{ label:'Ore totali/giorno', data:d.trend.map(x=>x.ore), borderColor:'#f2a933', backgroundColor:'rgba(242,169,51,.15)', tension:.3, fill:true }] },
+    options: opzioniGraficoBase()
+  });
+}
+
+async function caricaDashboardCollaboratore(){
+  const d = await apiCall('getDashboardCollaboratore', {});
+  document.getElementById('kpi-oremese').textContent = d.totaleMese.toFixed(1);
+  document.getElementById('kpi-ferieres').textContent = d.ferieResidue;
+  document.getElementById('kpi-ferieuse').textContent = d.ferieUsate;
+
+  distruggiGrafico('giorno');
+  grafici.giorno = new Chart(document.getElementById('chart-giorno'), {
+    type:'bar',
+    data:{ labels:d.perGiorno.map(x=>x.data.slice(5)), datasets:[{ label:'Ore', data:d.perGiorno.map(x=>x.ore), backgroundColor:'#f2a933' }] },
+    options: opzioniGraficoBase()
+  });
+
+  distruggiGrafico('miecommesse');
+  grafici.miecommesse = new Chart(document.getElementById('chart-mie-commesse'), {
+    type:'doughnut',
+    data:{ labels:d.perCommessa.map(x=>x.etichetta), datasets:[{ data:d.perCommessa.map(x=>x.ore), backgroundColor:COLORI_GRAFICO }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ color:'#8b98a2', font:{family:'Inter', size:11} } } } }
+  });
+}
+
+/* ---------------- EXPORT Excel / PDF ---------------- */
+
+function tabellaAJson(idTabella){
+  const tabella = document.getElementById(idTabella);
+  const intestazioni = Array.from(tabella.querySelectorAll('thead th')).map(th => th.textContent.trim());
+  const righe = Array.from(tabella.querySelectorAll('tbody tr')).map(tr =>
+    Array.from(tr.querySelectorAll('td')).map(td => td.textContent.trim())
+  );
+  return { intestazioni, righe };
+}
+
+function esportaExcel(idTabella, nomeFile){
+  const { intestazioni, righe } = tabellaAJson(idTabella);
+  const ws = XLSX.utils.aoa_to_sheet([intestazioni, ...righe]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Dati');
+  XLSX.writeFile(wb, nomeFile + '.xlsx');
+}
+
+function esportaPDF(idTabella, titolo){
+  const { intestazioni, righe } = tabellaAJson(idTabella);
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'landscape' });
+  doc.setFontSize(14);
+  doc.text(titolo, 14, 15);
+  doc.autoTable({ head:[intestazioni], body:righe, startY:20, styles:{ fontSize:8 }, headStyles:{ fillColor:[242,169,51], textColor:[20,24,27] } });
+  doc.save(titolo.replace(/\s+/g,'_') + '.pdf');
 }
 
 /* ---------------- PUSH (OneSignal) ---------------- */
@@ -577,7 +915,7 @@ function inizializzaOneSignal(){
   if (!window.OneSignalDeferred) window.OneSignalDeferred = [];
   OneSignalDeferred.push(async function(OneSignal){
     await OneSignal.init({ appId: ONESIGNAL_APP_ID, allowLocalhostAsSecureOrigin: true });
-    await OneSignal.login(contesto.email); // collega le push a questo utente (external_id)
+    await OneSignal.login(contesto.email);
     OneSignal.Notifications.requestPermission();
     const id = OneSignal.User.PushSubscription.id;
     if (id) apiCall('registraPlayerId', { playerId: id });
@@ -586,11 +924,8 @@ function inizializzaOneSignal(){
 
 /* ---------------- Service worker + avvio ---------------- */
 
-if ('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js');
-}
+if ('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js'); }
 
-// Se c'è già un token salvato, prova ad entrare direttamente
 (async function(){
   if (getToken()){
     try { await avviaApp(); } catch(e){ clearToken(); }
